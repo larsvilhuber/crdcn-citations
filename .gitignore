@@ -2,3 +2,5 @@ statrep
 statrep.zip
 *.gz
 *.csv
+.Rproj.user
+.RData

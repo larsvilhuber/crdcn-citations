@@ -1,0 +1,52 @@
+---
+title: "Obtaining citations for CRDCN publications"
+author: "Lars Vilhuber"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+## Sources
+
+- CRDCN
+- OpenAlex
+
+```{r config_libs,include=FALSE,message=FALSE}
+source(file.path(rprojroot::find_root(rprojroot::has_file("pathconfig.R")),"pathconfig.R"),echo=TRUE)
+source(file.path(basepath,"global-libraries.R"),echo=TRUE)
+source(file.path(basepath,"config.R"),echo=TRUE)
+```
+
+## Instructions
+This file, when executed, will
+
+
+## Data locations
+
+Permanent data is in
+
+> `r dataloc`
+
+and should be committed to the repository.
+
+Temporary data is in
+
+> `r interwrk`
+
+and can (should) be deleted after completion.
+
+## Current list of articles
+
+
+## System info
+
+```{r sysinfo}
+Sys.info()
+```

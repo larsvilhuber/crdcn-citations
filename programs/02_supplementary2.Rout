@@ -1,0 +1,201 @@
+
+R version 4.3.2 (2023-10-31) -- "Eye Holes"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Read citations per year for each of the AEJ:AE DOIs.
+> # Outputs:
+> #  - openalex.Rds - mostly unmodified pull by works
+> #  - citations.latest - a file with per-DOI-year cumulative and within-year citations
+> 
+> source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
+> source(file.path(basepath,"global-libraries.R"),echo=FALSE)
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tictoc
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: rcrossref
+Loading required package: readr
+Loading required package: data.table
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:tictoc’:
+
+    shift
+
+Loading required package: readxl
+Loading required package: rjson
+Loading required package: ggplot2
+Loading required package: stringr
+Loading required package: skimr
+Loading required package: tidyr
+Skipping install of 'openalexR' from a github remote, the SHA1 (4d46ba6e) has not changed since last install.
+  Use `force = TRUE` to force installation
+> source(file.path(programs,"config.R"), echo=FALSE)
+> 
+> # does not get auto-loaded
+> 
+> library(openalexR)
+Thank you for using openalexR!
+To acknowledge our work, please cite the package by calling `citation("openalexR")`.
+To suppress this message, add `openalexR.message = suppressed` to your .Renviron file.
+> 
+> # First, get the DOIs from the previous program
+> 
+> if ( file.exists(doi.file.Rds)) {
++   filtered.df <- readRDS(file= doi.file.Rds)
++   nrow(filtered.df)
++ } else {
++   stop(paste0("File missing: ",doi.file.Rds))
++   }
+[1] 166
+> 
+> # now pass these to openAlex
+> 
+> 
+> if ( file.exists(openalex.Rds) ) {
++   message(paste0("File already exists: ",openalex.Rds))
++   message("Loading file from previous version.")
++ } else {
++ 
++   tic.clear()
++   tic("Query to openAlex")
++   dois_toget <- unique(c(filtered.df$DOI))
++   works_from_dois <- oa_fetch(entity = "works", doi = dois_toget, verbose = FALSE)
++   toc(log=TRUE)
++   saveRDS(works_from_dois %>%
++           rename(doi.url = doi) %>%
++           mutate(DOI = str_remove(doi.url,"https://doi.org/")),
++           file=openalex.Rds)
++ }
+File already exists: /home/rstudio/crdcn-citations/data/openalex/openalex-aea.Rds
+Loading file from previous version.
+> 
+> # load the file from disk
+> works_from_dois <- readRDS(openalex.Rds)
+> skim(works_from_dois %>% select(id,publication_date,doi.url,DOI,type))
+── Data Summary ────────────────────────
+                           Values  
+Name                       %>%(...)
+Number of rows             166     
+Number of columns          5       
+_______________________            
+Column type frequency:             
+  character                5       
+________________________           
+Group variables            None    
+
+── Variable type: character ────────────────────────────────────────────────────
+  skim_variable    n_missing complete_rate min max empty n_unique whitespace
+1 id                       0             1  32  32     0      166          0
+2 publication_date         0             1  10  10     0      111          0
+3 doi.url                  0             1  30  50     0      166          0
+4 DOI                      0             1  14  34     0      166          0
+5 type                     0             1   7  12     0        2          0
+> 
+> # unpack the citation data
+> 
+> works_from_dois %>%
++   # Filter to the in-scope articles
++   rename(max_cited_by_count = cited_by_count) %>%
++   select(DOI,doi.url,publication_date,max_cited_by_count,counts_by_year)  %>%
++   tidyr::unnest(counts_by_year) -> works.step1
+>   # we now have:
+>   # [1] "DOI"                "doi.url"            "max_cited_by_count" "year"               "cited_by_count"
+>   #
+>   # It turns out, not all publications have citations in all years... those years are missing.
+> works.step1 %>%
++   distinct(DOI,year) %>%
++   expand(DOI,year) -> works.expanded
+> works.step1 %>%
++   select(-publication_date) %>%
++   right_join(works.expanded) %>%
++   left_join(works.step1 %>% distinct(DOI,publication_date)) %>%
++   # now to compute year-to-date cumulative citations, given early truncation
++   # max 10 years
++   arrange(DOI,desc(year)) %>%
++   group_by(DOI) %>%
++   mutate(max_cited_by_count  = max(max_cited_by_count,na.rm = TRUE),
++          cited_by_count      = replace_na(cited_by_count,0),
++          neg_cum_citations   = cumsum(replace_na(cited_by_count,0)),
++          ytd_cited_by_count  = max_cited_by_count - neg_cum_citations + cited_by_count,
++          publication_year    = year(publication_date)) %>%
++   # remove citation fields before publication_year
++   filter(year >= publication_year)    %>%
++   fill(doi.url,.direction = "updown") %>%
++   select(-neg_cum_citations) %>%
++   ungroup() ->
++     works.df
+Joining with `by = join_by(DOI, year)`
+Joining with `by = join_by(DOI)`
+> 
+> names(works.df)
+[1] "DOI"                "doi.url"            "max_cited_by_count"
+[4] "year"               "cited_by_count"     "publication_date"  
+[7] "ytd_cited_by_count" "publication_year"  
+> # > names(works.df)
+> # [1] "DOI"                "doi.url"            "max_cited_by_count" "year"               "cited_by_count"
+> # [6] "ytd_cited_by_count"
+> skim(works.df) %>% filter(n_missing >0)
+── Data Summary ────────────────────────
+                           Values  
+Name                       works.df
+Number of rows             376     
+Number of columns          8       
+_______________________            
+Column type frequency:             
+  character                1       
+________________________           
+Group variables            None    
+
+── Variable type: character ────────────────────────────────────────────────────
+  skim_variable n_missing complete_rate min max empty n_unique whitespace
+1 doi.url             112         0.702  30  50     0      109          0
+> # # A tibble: 0 × 17
+> 
+> saveRDS(works.df,citations.latest.Rds)
+> 
+> # export as CSV
+> 
+> 
+> write_excel_csv2(works.df,citations.latest.csv)
+> 
+> 
+> 
+> 
+> proc.time()
+   user  system elapsed 
+  2.052   0.240   2.402 

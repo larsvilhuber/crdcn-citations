@@ -5,8 +5,9 @@
 
 source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
 source(file.path(basepath,"global-libraries.R"),echo=FALSE)
-source(file.path(programs,"libraries.R"), echo=FALSE)
 source(file.path(programs,"config.R"), echo=FALSE)
+
+# does not get auto-loaded
 
 library(openalexR)
 
@@ -29,7 +30,7 @@ if ( file.exists(openalex.Rds) ) {
 
   tic.clear()
   tic("Query to openAlex")
-  dois_toget <- unique(c(filtered.df$doi))
+  dois_toget <- unique(c(filtered.df$DOI))
   works_from_dois <- oa_fetch(entity = "works", doi = dois_toget, verbose = FALSE)
   toc(log=TRUE)
   saveRDS(works_from_dois %>%
@@ -46,10 +47,8 @@ skim(works_from_dois %>% select(id,publication_date,doi.url,DOI,type))
 
 works_from_dois %>%
   # Filter to the in-scope articles
-  filter(publication_year < 2019 ) %>%
-  filter(publication_date < '2018-07-01') %>%
   rename(max_cited_by_count = cited_by_count) %>%
-  select(DOI,doi.url,max_cited_by_count,counts_by_year)  %>%
+  select(DOI,doi.url,publication_date,max_cited_by_count,counts_by_year)  %>%
   tidyr::unnest(counts_by_year) -> works.step1
   # we now have:
   # [1] "DOI"                "doi.url"            "max_cited_by_count" "year"               "cited_by_count"
@@ -59,7 +58,9 @@ works.step1 %>%
   distinct(DOI,year) %>%
   expand(DOI,year) -> works.expanded
 works.step1 %>%
+  select(-publication_date) %>%
   right_join(works.expanded) %>%
+  left_join(works.step1 %>% distinct(DOI,publication_date)) %>%
   # now to compute year-to-date cumulative citations, given early truncation
   # max 10 years
   arrange(DOI,desc(year)) %>%
@@ -67,7 +68,10 @@ works.step1 %>%
   mutate(max_cited_by_count  = max(max_cited_by_count,na.rm = TRUE),
          cited_by_count      = replace_na(cited_by_count,0),
          neg_cum_citations   = cumsum(replace_na(cited_by_count,0)),
-         ytd_cited_by_count  = max_cited_by_count - neg_cum_citations + cited_by_count) %>%
+         ytd_cited_by_count  = max_cited_by_count - neg_cum_citations + cited_by_count,
+         publication_year    = year(publication_date)) %>%
+  # remove citation fields before publication_year
+  filter(year >= publication_year)    %>%
   fill(doi.url,.direction = "updown") %>%
   select(-neg_cum_citations) %>%
   ungroup() ->
@@ -80,10 +84,12 @@ names(works.df)
 skim(works.df) %>% filter(n_missing >0)
 # # A tibble: 0 × 17
 
-saveRDS(works.df,citations.latest)
+saveRDS(works.df,citations.latest.Rds)
 
-# Get overall h-index as of 2023 and h-index by year
+# export as CSV
 
-# see next program
+
+write_excel_csv2(works.df,citations.latest.csv)
+
 
 

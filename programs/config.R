@@ -10,9 +10,8 @@ readRenviron(file.path(basepath,".Renviron"))
 
 # Crossref-related filenames
 
-issns.file <- file.path(crossrefloc,paste0("issns.Rds"))
 
-doi.file <- file.path(crossrefloc,"crossref_dois")
+doi.file <- file.path(crdcnloc,"crdcn_dois")
 doi.file.Rds <- paste(doi.file,"Rds",sep=".")
 doi.file.csv <- paste(doi.file,"csv",sep=".")
 
@@ -21,7 +20,9 @@ doi.file.csv <- paste(doi.file,"csv",sep=".")
 
 openalex.file <- file.path(openalexloc,"openalex-aea")
 openalex.Rds <- paste0(openalex.file,".Rds")
-citations.latest <- file.path(openalexloc,"citations-per-paper.Rds")
+citations.latest <- file.path(openalexloc,"citations-per-paper")
+citations.latest.Rds <- paste0(citations.latest,".Rds")
+citations.latest.csv <- paste0(citations.latest,".csv")
 
 openalex.authors     <- file.path(openalexloc,"openalex-aea-authors")
 openalex.authors.Rds <- paste0(openalex.authors,".Rds")

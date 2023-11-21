@@ -6,4 +6,7 @@
 # - open the "replication-paper.Rproj" in Rstudio, and "knit" the README.Rmd
 
 cd programs
-R CMD BATCH 00_main.R
+for arg in $(ls [0-9]*.R)
+do
+  R CMD BATCH "$arg"
+done
