@@ -1,24 +1,22 @@
-# Blank Project Template
+# Get demographics
 
-To clone this directory for a new "project",
+## Step 1: get list of published articles
 
-    git clone https://github.com/labordynamicsinstitute/paper-template.git
-    mv paper-template paper-meaningful-name  
-    cd paper-meaningful-name
-    git remote remove origin
+Pull from CrossRef
 
-Now create a new repository on the git of your choice, e.g., Github. You will then run
+## Step 2: Get author information, citations, institutional citations
 
-    git remote add origin git@github.com:labordynamicsinstitute/paper-meaningful-name.git
-    git push -u origin master
-  
-Alternatively, you can use the [Use as template](https://github.com/labordynamicsinstitute/paper-template/generate) functionality on Github.com.
+Pull from OpenAlex, but also map to Carnegie classification (will be fuzzy match)
 
-You should replace this README with a README template adequate for describing the resulting replication archive, such as
-- [AEA Template README](https://github.com/AEADataEditor/aea-de-guidance/blob/master/template-README.md)
 
-## Other useful templates
+## Supplementary: get filenames, software
 
-- [Gentzkow-Shapiro Lab template](https://github.com/gslab-econ/template): has more bells and whistles.
-- [Project TIER](https://www.projecttier.org/): a looser structure
+Using Krantz data, relate the software, and complexity/size of the repository, to the characteristics collected earlier.
 
+# NOTES
+
+## Running R on Codespaces
+
+```bash
+docker run -it --rm -v $(pwd):/project -w /project rocker/verse /bin/bash
+```

@@ -11,8 +11,7 @@ exit 0
 fi
 
 PWD=$(pwd)
-repo=${PWD##*/}
-space=larsvilhuber
+. $PWD/.myconfig.sh
 
 ## maybe it's local only
 echo "============================================================="
